@@ -1,0 +1,122 @@
+import { logger } from "../utils/logger.js";
+import { TTLCache } from "../utils/cache.js";
+import type { MusicResolver, ResolvedSong } from "./types.js";
+
+interface OdesliEntity {
+  title?: string;
+  artistName?: string;
+  type?: string;
+}
+
+interface OdesliResponse {
+  linksByPlatform?: {
+    spotify?: { url?: string };
+    appleMusic?: { url?: string };
+  };
+  entitiesByUniqueId?: Record<string, OdesliEntity>;
+  entityUniqueId?: string;
+}
+
+export class OdesliResolver implements MusicResolver {
+  private readonly country: string;
+  private readonly cache: TTLCache<ResolvedSong | null>;
+  private readonly baseUrl = "https://api.song.link/v1-alpha.1/links";
+
+  constructor(country: string, cacheTtlSeconds: number) {
+    this.country = country;
+    this.cache = new TTLCache<ResolvedSong | null>(cacheTtlSeconds);
+  }
+
+  async resolve(url: string): Promise<ResolvedSong | null> {
+    const normalizedUrl = url.trim();
+    const cached = this.cache.get(normalizedUrl);
+    if (cached !== undefined) {
+      logger.debug("Cache hit", { url: normalizedUrl });
+      return cached;
+    }
+
+    logger.debug("Cache miss, resolving", { url: normalizedUrl });
+
+    const result = await this.fetchWithRetry(normalizedUrl);
+    this.cache.set(normalizedUrl, result);
+    return result;
+  }
+
+  private async fetchWithRetry(url: string, attempt = 0): Promise<ResolvedSong | null> {
+    const maxRetries = 2;
+    const params = new URLSearchParams({ url, userCountry: this.country });
+    const requestUrl = `${this.baseUrl}?${params}`;
+
+    try {
+      const res = await fetch(requestUrl, {
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (res.status === 429 || (res.status >= 500 && res.status < 600)) {
+        if (attempt < maxRetries) {
+          const retryAfter = parseInt(res.headers.get("Retry-After") || "", 10);
+          const delay = isNaN(retryAfter) ? 1000 * (attempt + 1) : retryAfter * 1000;
+          logger.warn("Odesli retrying", { status: res.status, attempt, delay });
+          await new Promise((r) => setTimeout(r, delay));
+          return this.fetchWithRetry(url, attempt + 1);
+        }
+        logger.error("Odesli max retries exceeded", { status: res.status });
+        return null;
+      }
+
+      if (!res.ok) {
+        logger.warn("Odesli request failed", { status: res.status, url });
+        return null;
+      }
+
+      const data = (await res.json()) as OdesliResponse;
+      return this.parseResponse(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error("Odesli request error", { error: message, url });
+      return null;
+    }
+  }
+
+  private parseResponse(data: OdesliResponse): ResolvedSong {
+    const spotifyUrl = data.linksByPlatform?.spotify?.url;
+    const appleMusicUrl = data.linksByPlatform?.appleMusic?.url;
+
+    let title: string | undefined;
+    let artist: string | undefined;
+
+    if (data.entitiesByUniqueId) {
+      const primaryEntity = data.entityUniqueId
+        ? data.entitiesByUniqueId[data.entityUniqueId]
+        : undefined;
+
+      const entity =
+        primaryEntity ||
+        Object.values(data.entitiesByUniqueId).find((e) => e.type === "song") ||
+        Object.values(data.entitiesByUniqueId)[0];
+
+      if (entity) {
+        title = entity.title;
+        artist = entity.artistName;
+      }
+    }
+
+    return {
+      title,
+      artist,
+      spotifyUrl: this.validateUrl(spotifyUrl),
+      appleMusicUrl: this.validateUrl(appleMusicUrl),
+    };
+  }
+
+  private validateUrl(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+      return url;
+    } catch {
+      return undefined;
+    }
+  }
+}
