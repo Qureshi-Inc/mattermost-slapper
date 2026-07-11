@@ -100,8 +100,8 @@ export async function searchSpotifyApi(
 export function buildSpotifySearchUrl(title: string, artist: string): string | null {
   const query = `${title} ${artist}`.trim();
   if (!query) return null;
-  const encoded = encodeURIComponent(query).replace(/%20/g, "+");
-  const url = `https://open.spotify.com/search/${encoded}/tracks`;
+  const encoded = encodeURIComponent(query);
+  const url = `https://open.spotify.com/search/${encoded}`;
   logger.info("Spotify search URL generated", { url });
   return url;
 }
