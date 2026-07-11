@@ -1,6 +1,11 @@
 import { logger } from "../utils/logger.js";
 import { TTLCache } from "../utils/cache.js";
-import { searchAppleMusic, searchSpotifyApi, buildSpotifySearchUrl } from "./fallback.js";
+import {
+  searchAppleMusic,
+  searchSpotifyApi,
+  buildSpotifySearchUrl,
+  buildAppleMusicSearchUrl,
+} from "./fallback.js";
 import type { MusicResolver, ResolvedSong } from "./types.js";
 
 interface OdesliEntity {
@@ -103,6 +108,11 @@ export class OdesliResolver implements MusicResolver {
       song.appleMusicUrl = (await searchAppleMusic(title, artist, this.country)) ?? undefined;
     }
 
+    if (!song.appleMusicUrl) {
+      song.appleMusicUrl = buildAppleMusicSearchUrl(title, artist) ?? undefined;
+      song.appleMusicIsSearch = true;
+    }
+
     if (!song.spotifyUrl && this.spotifyClientId && this.spotifyClientSecret) {
       logger.info("Fallback: searching Spotify API", { title, artist });
       song.spotifyUrl =
@@ -112,6 +122,7 @@ export class OdesliResolver implements MusicResolver {
 
     if (!song.spotifyUrl) {
       song.spotifyUrl = buildSpotifySearchUrl(title, artist) ?? undefined;
+      song.spotifyIsSearch = true;
     }
 
     return song;

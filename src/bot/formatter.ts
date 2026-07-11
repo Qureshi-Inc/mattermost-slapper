@@ -24,23 +24,31 @@ export function formatResponse(song: ResolvedSong | null): string {
 
   const titleLine = formatTitleLine(song);
   const links: string[] = [];
-  const missing: string[] = [];
+  const notes: string[] = [];
 
   if (hasSpotify) {
-    links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify**](${song.spotifyUrl})`);
-  } else {
-    missing.push("_Spotify was not found for this recording._");
+    if (song.spotifyIsSearch) {
+      links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify** _(search)_](${song.spotifyUrl})`);
+      notes.push("_Exact Spotify link not found — search link provided._");
+    } else {
+      links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify**](${song.spotifyUrl})`);
+    }
   }
 
   if (hasAppleMusic) {
-    links.push(`[:applem:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
-  } else {
-    missing.push("_Apple Music was not found for this recording._");
+    if (song.appleMusicIsSearch) {
+      links.push(
+        `[:applem:](${song.appleMusicUrl}) [**Apple Music** _(search)_](${song.appleMusicUrl})`,
+      );
+      notes.push("_Exact Apple Music link not found — search link provided._");
+    } else {
+      links.push(`[:applem:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
+    }
   }
 
   let response = `${titleLine}\n\n${links.join("  ·  ")}`;
-  if (missing.length > 0) {
-    response += `\n\n${missing.join("\n")}`;
+  if (notes.length > 0) {
+    response += `\n\n${notes.join("\n")}`;
   }
 
   return response;

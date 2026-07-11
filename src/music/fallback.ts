@@ -53,6 +53,13 @@ export function buildSpotifySearchUrl(title: string, artist: string): string | n
   return `https://open.spotify.com/search/results/${encoded}`;
 }
 
+export function buildAppleMusicSearchUrl(title: string, artist: string): string | null {
+  const query = `${title} ${artist}`.trim();
+  if (!query) return null;
+  const encoded = encodeURIComponent(query);
+  return `https://music.apple.com/us/search?term=${encoded}`;
+}
+
 export async function searchSpotifyApi(
   title: string,
   artist: string,
