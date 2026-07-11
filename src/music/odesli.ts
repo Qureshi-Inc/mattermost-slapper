@@ -1,5 +1,6 @@
 import { logger } from "../utils/logger.js";
 import { TTLCache } from "../utils/cache.js";
+import { searchAppleMusic, searchSpotify } from "./fallback.js";
 import type { MusicResolver, ResolvedSong } from "./types.js";
 
 interface OdesliEntity {
@@ -21,10 +22,19 @@ export class OdesliResolver implements MusicResolver {
   private readonly country: string;
   private readonly cache: TTLCache<ResolvedSong | null>;
   private readonly baseUrl = "https://api.song.link/v1-alpha.1/links";
+  private readonly spotifyClientId?: string;
+  private readonly spotifyClientSecret?: string;
 
-  constructor(country: string, cacheTtlSeconds: number) {
+  constructor(
+    country: string,
+    cacheTtlSeconds: number,
+    spotifyClientId?: string,
+    spotifyClientSecret?: string,
+  ) {
     this.country = country;
     this.cache = new TTLCache<ResolvedSong | null>(cacheTtlSeconds);
+    this.spotifyClientId = spotifyClientId;
+    this.spotifyClientSecret = spotifyClientSecret;
   }
 
   async resolve(url: string): Promise<ResolvedSong | null> {
@@ -72,12 +82,35 @@ export class OdesliResolver implements MusicResolver {
       }
 
       const data = (await res.json()) as OdesliResponse;
-      return this.parseResponse(data);
+      const result = this.parseResponse(data);
+      return this.fillMissing(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error("Odesli request error", { error: message, url });
       return null;
     }
+  }
+
+  private async fillMissing(song: ResolvedSong): Promise<ResolvedSong> {
+    if (song.spotifyUrl && song.appleMusicUrl) return song;
+    if (!song.title) return song;
+
+    const title = song.title;
+    const artist = song.artist || "";
+
+    if (!song.appleMusicUrl) {
+      logger.info("Fallback: searching Apple Music", { title, artist });
+      song.appleMusicUrl = (await searchAppleMusic(title, artist, this.country)) ?? undefined;
+    }
+
+    if (!song.spotifyUrl) {
+      logger.info("Fallback: searching Spotify", { title, artist });
+      song.spotifyUrl =
+        (await searchSpotify(title, artist, this.spotifyClientId, this.spotifyClientSecret)) ??
+        undefined;
+    }
+
+    return song;
   }
 
   private parseResponse(data: OdesliResponse): ResolvedSong {
