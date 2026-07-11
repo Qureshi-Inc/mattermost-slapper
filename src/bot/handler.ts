@@ -83,8 +83,11 @@ export class BotHandler {
 
     logger.info("Resolving URL", { url: new URL(musicUrl).hostname, postId: post.id });
     const result = await this.resolver.resolve(musicUrl);
+    logger.info("Resolution complete", { postId: post.id, hasResult: !!result });
     const response = formatResponse(result);
+    logger.info("Replying to thread", { postId: post.id });
     await this.reply(post, response);
+    logger.info("Reply sent", { postId: post.id });
   }
 
   private extractDirectUrl(message: string): string | null {

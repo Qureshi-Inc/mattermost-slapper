@@ -48,9 +48,11 @@ export class OdesliResolver implements MusicResolver {
     const requestUrl = `${this.baseUrl}?${params}`;
 
     try {
+      logger.info("Odesli request starting", { url, attempt });
       const res = await fetch(requestUrl, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(30000),
       });
+      logger.info("Odesli response received", { status: res.status });
 
       if (res.status === 429 || (res.status >= 500 && res.status < 600)) {
         if (attempt < maxRetries) {
