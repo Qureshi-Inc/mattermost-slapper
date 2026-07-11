@@ -11,8 +11,8 @@ describe("formatResponse", () => {
     });
     expect(result).toContain("Never Gonna Give You Up");
     expect(result).toContain("Rick Astley");
-    expect(result).toContain("[Spotify](https://open.spotify.com/track/123)");
-    expect(result).toContain("[Apple Music](https://music.apple.com/us/album/x/1)");
+    expect(result).toContain("[**Spotify**](https://open.spotify.com/track/123)");
+    expect(result).toContain("[**Apple Music**](https://music.apple.com/us/album/x/1)");
     expect(result).toContain(" · ");
   });
 
@@ -22,9 +22,9 @@ describe("formatResponse", () => {
       artist: "Artist",
       spotifyUrl: "https://open.spotify.com/track/123",
     });
-    expect(result).toContain("[Spotify]");
+    expect(result).toContain("[**Spotify**]");
     expect(result).toContain("Apple Music was not found for this recording.");
-    expect(result).not.toContain("[Apple Music]");
+    expect(result).not.toContain("[**Apple Music**]");
   });
 
   it("formats Apple Music only", () => {
@@ -33,9 +33,9 @@ describe("formatResponse", () => {
       artist: "Artist",
       appleMusicUrl: "https://music.apple.com/us/album/x/1",
     });
-    expect(result).toContain("[Apple Music]");
+    expect(result).toContain("[**Apple Music**]");
     expect(result).toContain("Spotify was not found for this recording.");
-    expect(result).not.toContain("[Spotify]");
+    expect(result).not.toContain("[**Spotify**]");
   });
 
   it("handles no platforms found", () => {

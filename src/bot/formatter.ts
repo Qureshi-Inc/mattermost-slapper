@@ -27,18 +27,18 @@ export function formatResponse(song: ResolvedSong | null): string {
   const missing: string[] = [];
 
   if (hasSpotify) {
-    links.push(`[Spotify](${song.spotifyUrl})`);
+    links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify**](${song.spotifyUrl})`);
   } else {
-    missing.push("Spotify was not found for this recording.");
+    missing.push("_Spotify was not found for this recording._");
   }
 
   if (hasAppleMusic) {
-    links.push(`[Apple Music](${song.appleMusicUrl})`);
+    links.push(`[:apple:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
   } else {
-    missing.push("Apple Music was not found for this recording.");
+    missing.push("_Apple Music was not found for this recording._");
   }
 
-  let response = `${titleLine}\n\n${links.join(" · ")}`;
+  let response = `${titleLine}\n\n${links.join("  ·  ")}`;
   if (missing.length > 0) {
     response += `\n\n${missing.join("\n")}`;
   }
