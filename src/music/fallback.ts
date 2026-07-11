@@ -1,12 +1,42 @@
 import { logger } from "../utils/logger.js";
 
+function cleanTitle(title: string): string {
+  return title
+    .replace(/\s*[\(\[](official\s*)?(music\s*)?(lyric\s*)?(video|audio|visualizer|mv|hd|4k|remaster(ed)?)[)\]]/gi, "")
+    .replace(/\s*[\(\[]feat\.?[^\])]*[)\]]/gi, "")
+    .replace(/\s*[\(\[]ft\.?[^\])]*[)\]]/gi, "")
+    .replace(/\s*[\(\[]with\s[^\])]*[)\]]/gi, "")
+    .replace(/\s*[\(\[](prod\.?|produced by)[^\])]*[)\]]/gi, "")
+    .replace(/\s*[\(\[].*?(remix|version|edit|deluxe|explicit)[)\]]/gi, "")
+    .replace(/\s*\|.*$/, "")
+    .trim();
+}
+
+function parseArtistTitle(rawTitle: string, rawArtist: string): { title: string; artist: string } {
+  const cleaned = cleanTitle(rawTitle);
+
+  const separators = [" - ", " – ", " — ", " | "];
+  for (const sep of separators) {
+    const idx = cleaned.indexOf(sep);
+    if (idx > 0) {
+      const before = cleaned.slice(0, idx).trim();
+      const after = cleaned.slice(idx + sep.length).trim();
+      return { artist: before, title: after };
+    }
+  }
+
+  return { title: cleaned, artist: rawArtist };
+}
+
 export async function searchAppleMusic(
   title: string,
   artist: string,
   country: string,
 ): Promise<string | null> {
-  const query = `${title} ${artist}`.trim();
+  const parsed = parseArtistTitle(title, artist);
+  const query = `${parsed.title} ${parsed.artist}`.trim();
   if (!query) return null;
+  logger.info("Apple Music search query", { query });
 
   const params = new URLSearchParams({
     term: query,
@@ -32,7 +62,7 @@ export async function searchAppleMusic(
 
     if (!data.results || data.results.length === 0) return null;
 
-    const match = findBestMatch(data.results, title, artist);
+    const match = findBestMatch(data.results, parsed.title, parsed.artist);
     if (match?.trackViewUrl) {
       logger.info("Apple Music fallback found", { url: match.trackViewUrl });
       return match.trackViewUrl;
@@ -47,14 +77,16 @@ export async function searchAppleMusic(
 }
 
 export function buildSpotifySearchUrl(title: string, artist: string): string | null {
-  const query = `${title} ${artist}`.trim();
+  const parsed = parseArtistTitle(title, artist);
+  const query = `${parsed.title} ${parsed.artist}`.trim();
   if (!query) return null;
   const encoded = encodeURIComponent(query);
   return `https://open.spotify.com/search/results/${encoded}`;
 }
 
 export function buildAppleMusicSearchUrl(title: string, artist: string): string | null {
-  const query = `${title} ${artist}`.trim();
+  const parsed = parseArtistTitle(title, artist);
+  const query = `${parsed.title} ${parsed.artist}`.trim();
   if (!query) return null;
   const encoded = encodeURIComponent(query);
   return `https://music.apple.com/us/search?term=${encoded}`;
