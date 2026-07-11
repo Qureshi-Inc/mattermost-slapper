@@ -24,34 +24,16 @@ export function formatResponse(song: ResolvedSong | null): string {
 
   const titleLine = formatTitleLine(song);
   const links: string[] = [];
-  const notes: string[] = [];
 
   if (hasSpotify) {
-    if (song.spotifyIsSearch) {
-      links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify** _(search)_](${song.spotifyUrl})`);
-      notes.push("_Exact Spotify link not found — search link provided._");
-    } else {
-      links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify**](${song.spotifyUrl})`);
-    }
+    links.push(`[:spotify:](${song.spotifyUrl}) [**Spotify**](${song.spotifyUrl})`);
   }
 
   if (hasAppleMusic) {
-    if (song.appleMusicIsSearch) {
-      links.push(
-        `[:applem:](${song.appleMusicUrl}) [**Apple Music** _(search)_](${song.appleMusicUrl})`,
-      );
-      notes.push("_Exact Apple Music link not found — search link provided._");
-    } else {
-      links.push(`[:applem:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
-    }
+    links.push(`[:applem:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
   }
 
-  let response = `${titleLine}\n\n${links.join("  ·  ")}`;
-  if (notes.length > 0) {
-    response += `\n\n${notes.join("\n")}`;
-  }
-
-  return response;
+  return `${titleLine}\n\n${links.join("  ·  ")}`;
 }
 
 export function formatNoLink(): string {

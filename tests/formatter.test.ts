@@ -16,38 +16,24 @@ describe("formatResponse", () => {
     expect(result).toContain(" · ");
   });
 
-  it("formats Spotify only with direct link", () => {
+  it("formats Spotify only", () => {
     const result = formatResponse({
       title: "Song",
       artist: "Artist",
       spotifyUrl: "https://open.spotify.com/track/123",
     });
-    expect(result).toContain("[**Spotify**](https://open.spotify.com/track/123)");
-    expect(result).not.toContain("(search)");
+    expect(result).toContain("[**Spotify**]");
+    expect(result).not.toContain("[**Apple Music**]");
   });
 
-  it("formats Apple Music only with direct link", () => {
+  it("formats Apple Music only", () => {
     const result = formatResponse({
       title: "Song",
       artist: "Artist",
       appleMusicUrl: "https://music.apple.com/us/album/x/1",
     });
-    expect(result).toContain("[**Apple Music**](https://music.apple.com/us/album/x/1)");
-    expect(result).not.toContain("(search)");
-  });
-
-  it("marks search links with (search) label", () => {
-    const result = formatResponse({
-      title: "Song",
-      artist: "Artist",
-      spotifyUrl: "https://open.spotify.com/search/results/Song%20Artist",
-      spotifyIsSearch: true,
-      appleMusicUrl: "https://music.apple.com/us/search?term=Song%20Artist",
-      appleMusicIsSearch: true,
-    });
-    expect(result).toContain("_(search)_");
-    expect(result).toContain("Exact Spotify link not found");
-    expect(result).toContain("Exact Apple Music link not found");
+    expect(result).toContain("[**Apple Music**]");
+    expect(result).not.toContain("[**Spotify**]");
   });
 
   it("handles no platforms found", () => {
