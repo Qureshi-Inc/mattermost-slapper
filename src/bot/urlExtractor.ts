@@ -36,7 +36,8 @@ export function extractUrls(text: string): string[] {
 
 function isNonTrackUrl(parsed: URL): boolean {
   const path = parsed.pathname.toLowerCase();
-  if (parsed.hostname === "open.spotify.com" && path.startsWith("/search")) return true;
+  if (parsed.hostname === "open.spotify.com" && path.startsWith("/search/")) return true;
+  if (parsed.hostname === "open.spotify.com" && path === "/search") return true;
   if (parsed.hostname === "open.spotify.com" && path === "/") return true;
   return false;
 }

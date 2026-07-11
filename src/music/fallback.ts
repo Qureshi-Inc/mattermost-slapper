@@ -46,6 +46,13 @@ export async function searchAppleMusic(
   }
 }
 
+export function buildSpotifySearchUrl(title: string, artist: string): string | null {
+  const query = `${title} ${artist}`.trim();
+  if (!query) return null;
+  const encoded = encodeURIComponent(query);
+  return `https://open.spotify.com/search/results/${encoded}`;
+}
+
 export async function searchSpotifyApi(
   title: string,
   artist: string,
@@ -97,14 +104,6 @@ export async function searchSpotifyApi(
   }
 }
 
-export function buildSpotifySearchUrl(title: string, artist: string): string | null {
-  const query = `${title} ${artist}`.trim();
-  if (!query) return null;
-  const encoded = encodeURIComponent(query);
-  const url = `https://open.spotify.com/search/${encoded}`;
-  logger.info("Spotify search URL generated", { url });
-  return url;
-}
 
 let cachedSpotifyToken: { token: string; expiresAt: number } | null = null;
 
