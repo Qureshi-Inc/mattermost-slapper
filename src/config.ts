@@ -7,8 +7,6 @@ export interface Config {
   port: number;
   logLevel: string;
   cacheTtlSeconds: number;
-  spotifyClientId?: string;
-  spotifyClientSecret?: string;
 }
 
 export function loadConfig(): Config {
@@ -43,7 +41,5 @@ export function loadConfig(): Config {
     port: isNaN(port) ? 3000 : port,
     logLevel: process.env.LOG_LEVEL || "info",
     cacheTtlSeconds: isNaN(cacheTtlSeconds) ? 86400 : cacheTtlSeconds,
-    spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
-    spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
   };
 }

@@ -1,6 +1,6 @@
 import { logger } from "../utils/logger.js";
 import { TTLCache } from "../utils/cache.js";
-import { searchAppleMusic, searchSpotify } from "./fallback.js";
+import { searchAppleMusic, buildSpotifySearchUrl } from "./fallback.js";
 import type { MusicResolver, ResolvedSong } from "./types.js";
 
 interface OdesliEntity {
@@ -22,19 +22,9 @@ export class OdesliResolver implements MusicResolver {
   private readonly country: string;
   private readonly cache: TTLCache<ResolvedSong | null>;
   private readonly baseUrl = "https://api.song.link/v1-alpha.1/links";
-  private readonly spotifyClientId?: string;
-  private readonly spotifyClientSecret?: string;
-
-  constructor(
-    country: string,
-    cacheTtlSeconds: number,
-    spotifyClientId?: string,
-    spotifyClientSecret?: string,
-  ) {
+  constructor(country: string, cacheTtlSeconds: number) {
     this.country = country;
     this.cache = new TTLCache<ResolvedSong | null>(cacheTtlSeconds);
-    this.spotifyClientId = spotifyClientId;
-    this.spotifyClientSecret = spotifyClientSecret;
   }
 
   async resolve(url: string): Promise<ResolvedSong | null> {
@@ -104,10 +94,8 @@ export class OdesliResolver implements MusicResolver {
     }
 
     if (!song.spotifyUrl) {
-      logger.info("Fallback: searching Spotify", { title, artist });
-      song.spotifyUrl =
-        (await searchSpotify(title, artist, this.spotifyClientId, this.spotifyClientSecret)) ??
-        undefined;
+      logger.info("Fallback: generating Spotify search URL", { title, artist });
+      song.spotifyUrl = buildSpotifySearchUrl(title, artist) ?? undefined;
     }
 
     return song;
