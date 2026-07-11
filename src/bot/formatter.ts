@@ -33,7 +33,7 @@ export function formatResponse(song: ResolvedSong | null): string {
   }
 
   if (hasAppleMusic) {
-    links.push(`[:apple:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
+    links.push(`[:applem:](${song.appleMusicUrl}) [**Apple Music**](${song.appleMusicUrl})`);
   } else {
     missing.push("_Apple Music was not found for this recording._");
   }
