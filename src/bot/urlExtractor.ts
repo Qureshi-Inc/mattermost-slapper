@@ -22,15 +22,23 @@ export function extractUrls(text: string): string[] {
       const parsed = new URL(raw);
       const hostname = parsed.hostname.toLowerCase();
 
-      if (isSupportedHost(hostname)) {
-        results.push(raw);
-      }
+      if (!isSupportedHost(hostname)) continue;
+      if (isNonTrackUrl(parsed)) continue;
+
+      results.push(raw);
     } catch {
       continue;
     }
   }
 
   return results;
+}
+
+function isNonTrackUrl(parsed: URL): boolean {
+  const path = parsed.pathname.toLowerCase();
+  if (parsed.hostname === "open.spotify.com" && path.startsWith("/search")) return true;
+  if (parsed.hostname === "open.spotify.com" && path === "/") return true;
+  return false;
 }
 
 function isSupportedHost(hostname: string): boolean {

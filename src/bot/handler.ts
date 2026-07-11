@@ -72,7 +72,7 @@ export class BotHandler {
       musicUrl = directUrls;
     } else {
       const thread = await this.client.getThread(threadRootId);
-      const posts = Object.values(thread.posts);
+      const posts = Object.values(thread.posts).filter((p) => p.user_id !== this.botUserId);
       musicUrl = findMusicUrl(post.message, posts, post.id);
     }
 
