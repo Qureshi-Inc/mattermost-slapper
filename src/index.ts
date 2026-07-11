@@ -20,7 +20,12 @@ async function main() {
   const me = await client.getMe();
   logger.info("Authenticated as", { userId: me.id, username: me.username });
 
-  const resolver = new OdesliResolver(config.odesliCountry, config.cacheTtlSeconds);
+  const resolver = new OdesliResolver(
+    config.odesliCountry,
+    config.cacheTtlSeconds,
+    config.spotifyClientId,
+    config.spotifyClientSecret,
+  );
   const handler = new BotHandler(client, resolver, config.slapperMention, me.id);
 
   const ws = new MattermostWebSocket(config.mattermostWsUrl, config.mattermostToken);
