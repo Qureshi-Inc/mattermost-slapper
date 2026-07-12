@@ -9,6 +9,7 @@ export interface Config {
   cacheTtlSeconds: number;
   spotifyClientId?: string;
   spotifyClientSecret?: string;
+  autoResolveChannelIds: string[];
 }
 
 export function loadConfig(): Config {
@@ -45,5 +46,9 @@ export function loadConfig(): Config {
     cacheTtlSeconds: isNaN(cacheTtlSeconds) ? 86400 : cacheTtlSeconds,
     spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
     spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+    autoResolveChannelIds: (process.env.AUTO_RESOLVE_CHANNEL_IDS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
 }

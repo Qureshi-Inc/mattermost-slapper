@@ -26,7 +26,13 @@ async function main() {
     config.spotifyClientId,
     config.spotifyClientSecret,
   );
-  const handler = new BotHandler(client, resolver, config.slapperMention, me.id);
+  const handler = new BotHandler(
+    client,
+    resolver,
+    config.slapperMention,
+    me.id,
+    config.autoResolveChannelIds,
+  );
 
   const ws = new MattermostWebSocket(config.mattermostWsUrl, config.mattermostToken);
   ws.onEvent((event) => handler.handleEvent(event));

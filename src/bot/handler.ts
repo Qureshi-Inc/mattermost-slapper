@@ -11,6 +11,7 @@ export class BotHandler {
   private readonly resolver: MusicResolver;
   private readonly mention: string;
   private readonly botUserId: string;
+  private readonly autoResolveChannelIds: string[];
   private readonly dedup = new TTLCache<boolean>(60);
 
   constructor(
@@ -18,11 +19,13 @@ export class BotHandler {
     resolver: MusicResolver,
     mention: string,
     botUserId: string,
+    autoResolveChannelIds: string[] = [],
   ) {
     this.client = client;
     this.resolver = resolver;
     this.mention = mention;
     this.botUserId = botUserId;
+    this.autoResolveChannelIds = autoResolveChannelIds;
   }
 
   async handleEvent(event: WebSocketEvent): Promise<void> {
@@ -38,7 +41,12 @@ export class BotHandler {
     }
 
     if (post.user_id === this.botUserId) return;
-    if (!post.message.includes(this.mention)) return;
+
+    const isAutoResolveChannel = this.autoResolveChannelIds.includes(post.channel_id);
+    const hasMention = post.message.includes(this.mention);
+    const hasDirectUrl = extractUrls(post.message).length > 0;
+
+    if (!hasMention && !(isAutoResolveChannel && hasDirectUrl)) return;
 
     if (this.dedup.has(post.id)) {
       logger.debug("Duplicate event, skipping", { postId: post.id });
@@ -67,13 +75,20 @@ export class BotHandler {
     const threadRootId = post.root_id || post.id;
     let musicUrl: string | null = null;
 
-    const directUrls = this.extractDirectUrl(post.message);
-    if (directUrls) {
-      musicUrl = directUrls;
-    } else {
-      const thread = await this.client.getThread(threadRootId);
-      const posts = Object.values(thread.posts).filter((p) => p.user_id !== this.botUserId);
-      musicUrl = findMusicUrl(post.message, posts, post.id);
+    // First check for URLs directly in the message
+    const messageUrls = extractUrls(post.message);
+    if (messageUrls.length > 0) {
+      musicUrl = messageUrls[0];
+    } else if (post.message.includes(this.mention)) {
+      // Only scan thread if triggered by @mention
+      const directUrls = this.extractDirectUrl(post.message);
+      if (directUrls) {
+        musicUrl = directUrls;
+      } else {
+        const thread = await this.client.getThread(threadRootId);
+        const posts = Object.values(thread.posts).filter((p) => p.user_id !== this.botUserId);
+        musicUrl = findMusicUrl(post.message, posts, post.id);
+      }
     }
 
     if (!musicUrl) {
