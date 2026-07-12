@@ -41,6 +41,7 @@ export class BotHandler {
     }
 
     if (post.user_id === this.botUserId) return;
+    if (post.props?.from_bot === "true") return;
 
     const isAutoResolveChannel = this.autoResolveChannelIds.includes(post.channel_id);
     const hasMention = post.message.includes(this.mention);

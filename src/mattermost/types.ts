@@ -6,6 +6,10 @@ export interface MattermostPost {
   message: string;
   create_at: number;
   type: string;
+  props?: {
+    from_bot?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface MattermostThread {
