@@ -13,6 +13,10 @@ export class MattermostWebSocket {
   private reconnectDelay = 1000;
   private closed = false;
   private authenticated = false;
+  private pingTimer: ReturnType<typeof setInterval> | null = null;
+  private isAlive = false;
+  // How often to ping, and the max silence before we consider the socket dead.
+  private static readonly PING_INTERVAL_MS = 30000;
 
   constructor(url: string, token: string) {
     this.url = url;
@@ -39,6 +43,7 @@ export class MattermostWebSocket {
   close(): void {
     this.closed = true;
     this.authenticated = false;
+    this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -46,6 +51,36 @@ export class MattermostWebSocket {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
+    }
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.isAlive = true;
+    // ws emits "pong" in response to our ping frame. If a full interval passes
+    // with no pong, the connection is dead (silent drop — no close frame, which
+    // is exactly the failure that left the bot a zombie for days). Terminate so
+    // the "close" handler fires and we reconnect.
+    this.pingTimer = setInterval(() => {
+      if (!this.ws) return;
+      if (!this.isAlive) {
+        logger.warn("WebSocket heartbeat missed, terminating stale connection");
+        this.ws.terminate();
+        return;
+      }
+      this.isAlive = false;
+      try {
+        this.ws.ping();
+      } catch {
+        // ignore; terminate will happen on next tick
+      }
+    }, MattermostWebSocket.PING_INTERVAL_MS);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
     }
   }
 
@@ -58,6 +93,7 @@ export class MattermostWebSocket {
     this.ws.on("open", () => {
       logger.info("WebSocket connected, authenticating");
       this.reconnectDelay = 1000;
+      this.startHeartbeat();
       this.ws!.send(
         JSON.stringify({
           seq: 1,
@@ -67,7 +103,13 @@ export class MattermostWebSocket {
       );
     });
 
+    // Any traffic — a pong or a real event — proves the socket is alive.
+    this.ws.on("pong", () => {
+      this.isAlive = true;
+    });
+
     this.ws.on("message", (data) => {
+      this.isAlive = true;
       let event: WebSocketEvent;
       try {
         event = JSON.parse(data.toString());
@@ -89,6 +131,7 @@ export class MattermostWebSocket {
 
     this.ws.on("close", () => {
       this.authenticated = false;
+      this.stopHeartbeat();
       logger.warn("WebSocket disconnected");
       this.scheduleReconnect();
     });
