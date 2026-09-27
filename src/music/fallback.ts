@@ -2,17 +2,28 @@ import { logger } from "../utils/logger.js";
 
 function cleanTitle(title: string): string {
   return title
-    .replace(/\s*[\(\[](official\s*)?(music\s*)?(lyric\s*)?(video|audio|visualizer|mv|hd|4k|remaster(ed)?)[)\]]/gi, "")
-    .replace(/\s*[\(\[]feat\.?[^\])]*[)\]]/gi, "")
-    .replace(/\s*[\(\[]ft\.?[^\])]*[)\]]/gi, "")
-    .replace(/\s*[\(\[]with\s[^\])]*[)\]]/gi, "")
-    .replace(/\s*[\(\[](prod\.?|produced by)[^\])]*[)\]]/gi, "")
-    .replace(/\s*[\(\[].*?(remix|version|edit|deluxe|explicit)[)\]]/gi, "")
+    .replace(
+      /\s*[([][^)\]]*\b(official|video|audio|lyrics?|visuali[sz]er|mv|hd|4k|remaster(ed)?)\b[^)\]]*[)\]]/gi,
+      "",
+    )
+    .replace(/\s*[([]feat\.?[^\])]*[)\]]/gi, "")
+    .replace(/\s*[([]ft\.?[^\])]*[)\]]/gi, "")
+    .replace(/\s*[([]with\s[^\])]*[)\]]/gi, "")
+    .replace(/\s*[([](prod\.?|produced by)[^\])]*[)\]]/gi, "")
+    .replace(/\s*[([].*?(remix|version|edit|deluxe|explicit)[)\]]/gi, "")
     .replace(/\s*\|.*$/, "")
     .trim();
 }
 
-function parseArtistTitle(rawTitle: string, rawArtist: string): { title: string; artist: string } {
+// encodeURIComponent leaves ( and ) alone, which breaks Markdown link targets
+function encodeQuery(query: string): string {
+  return encodeURIComponent(query).replace(/\(/g, "%28").replace(/\)/g, "%29");
+}
+
+export function parseArtistTitle(
+  rawTitle: string,
+  rawArtist: string,
+): { title: string; artist: string } {
   const cleaned = cleanTitle(rawTitle);
 
   const separators = [" - ", " – ", " — ", " | "];
@@ -33,7 +44,7 @@ export async function searchAppleMusic(
   artist: string,
   country: string,
 ): Promise<string | null> {
-  const parsed = parseArtistTitle(title, artist);
+  const parsed = { title: cleanTitle(title), artist };
   const query = `${parsed.title} ${parsed.artist}`.trim();
   if (!query) return null;
   logger.info("Apple Music search query", { query });
@@ -77,18 +88,16 @@ export async function searchAppleMusic(
 }
 
 export function buildSpotifySearchUrl(title: string, artist: string): string | null {
-  const parsed = parseArtistTitle(title, artist);
-  const query = `${parsed.title} ${parsed.artist}`.trim();
+  const query = `${cleanTitle(title)} ${artist}`.trim();
   if (!query) return null;
-  const encoded = encodeURIComponent(query);
+  const encoded = encodeQuery(query);
   return `https://open.spotify.com/search/results/${encoded}`;
 }
 
 export function buildAppleMusicSearchUrl(title: string, artist: string): string | null {
-  const parsed = parseArtistTitle(title, artist);
-  const query = `${parsed.title} ${parsed.artist}`.trim();
+  const query = `${cleanTitle(title)} ${artist}`.trim();
   if (!query) return null;
-  const encoded = encodeURIComponent(query);
+  const encoded = encodeQuery(query);
   return `https://music.apple.com/us/search?term=${encoded}`;
 }
 
@@ -98,8 +107,9 @@ export async function searchSpotifyApi(
   clientId: string,
   clientSecret: string,
 ): Promise<string | null> {
-  const query = `track:${title} artist:${artist}`.trim();
+  const query = `${cleanTitle(title)} ${artist}`.trim();
   if (!query) return null;
+  logger.info("Spotify search query", { query });
 
   try {
     const token = await getSpotifyToken(clientId, clientSecret);
@@ -143,10 +153,12 @@ export async function searchSpotifyApi(
   }
 }
 
-
 let cachedSpotifyToken: { token: string; expiresAt: number } | null = null;
 
-async function getSpotifyToken(clientId: string, clientSecret: string): Promise<string | null> {
+export async function getSpotifyToken(
+  clientId: string,
+  clientSecret: string,
+): Promise<string | null> {
   if (cachedSpotifyToken && Date.now() < cachedSpotifyToken.expiresAt) {
     return cachedSpotifyToken.token;
   }

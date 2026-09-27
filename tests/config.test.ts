@@ -57,7 +57,7 @@ describe("loadConfig", () => {
     const config = loadConfig();
     expect(config.slapperMention).toBe("@slapper");
     expect(config.port).toBe(3000);
-    expect(config.odesliCountry).toBe("US");
+    expect(config.country).toBe("US");
     expect(config.cacheTtlSeconds).toBe(86400);
   });
 });

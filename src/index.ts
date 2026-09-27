@@ -2,7 +2,7 @@ import { loadConfig } from "./config.js";
 import { setLogLevel, logger } from "./utils/logger.js";
 import { MattermostClient } from "./mattermost/client.js";
 import { MattermostWebSocket } from "./mattermost/websocket.js";
-import { OdesliResolver } from "./music/odesli.js";
+import { MusicLinkResolver } from "./music/resolver.js";
 import { BotHandler } from "./bot/handler.js";
 import { createServer } from "./server.js";
 
@@ -20,8 +20,8 @@ async function main() {
   const me = await client.getMe();
   logger.info("Authenticated as", { userId: me.id, username: me.username });
 
-  const resolver = new OdesliResolver(
-    config.odesliCountry,
+  const resolver = new MusicLinkResolver(
+    config.country,
     config.cacheTtlSeconds,
     config.spotifyClientId,
     config.spotifyClientSecret,

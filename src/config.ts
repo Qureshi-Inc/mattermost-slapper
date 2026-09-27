@@ -3,7 +3,7 @@ export interface Config {
   mattermostWsUrl: string;
   mattermostToken: string;
   slapperMention: string;
-  odesliCountry: string;
+  country: string;
   port: number;
   logLevel: string;
   cacheTtlSeconds: number;
@@ -40,7 +40,7 @@ export function loadConfig(): Config {
     mattermostWsUrl,
     mattermostToken,
     slapperMention: process.env.SLAPPER_MENTION || "@slapper",
-    odesliCountry: process.env.ODESLI_COUNTRY || "US",
+    country: process.env.MUSIC_COUNTRY || process.env.ODESLI_COUNTRY || "US",
     port: isNaN(port) ? 3000 : port,
     logLevel: process.env.LOG_LEVEL || "info",
     cacheTtlSeconds: isNaN(cacheTtlSeconds) ? 86400 : cacheTtlSeconds,

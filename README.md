@@ -38,7 +38,7 @@ User: @slapper https://youtube.com/watch?v=dQw4w9WgXcQ
 │  │  URL Extract  │  │  Bot Handler       │  │
 │  └──────────────┘  └────────────────────┘  │
 │  ┌──────────────┐  ┌────────────────────┐  │
-│  │  Odesli API  │  │  Fastify Health    │  │
+│  │  Resolver    │  │  Fastify Health    │  │
 │  └──────────────┘  └────────────────────┘  │
 └─────────────────────────────────────────────┘
 ```
@@ -80,15 +80,27 @@ The bot must be a member of every channel it watches. It cannot see messages in 
 
 ## Environment Variables
 
-| Variable            | Required | Default    | Description                   |
-| ------------------- | -------- | ---------- | ----------------------------- |
-| `MATTERMOST_URL`    | Yes      | —          | Mattermost server URL (https) |
-| `MATTERMOST_TOKEN`  | Yes      | —          | Bot access token              |
-| `SLAPPER_MENTION`   | No       | `@slapper` | Trigger mention               |
-| `ODESLI_COUNTRY`    | No       | `US`       | Country code for Odesli       |
-| `PORT`              | No       | `3000`     | Health check port             |
-| `LOG_LEVEL`         | No       | `info`     | debug, info, warn, error      |
-| `CACHE_TTL_SECONDS` | No       | `86400`    | URL resolution cache TTL      |
+| Variable                | Required | Default    | Description                                                         |
+| ----------------------- | -------- | ---------- | ------------------------------------------------------------------- |
+| `MATTERMOST_URL`        | Yes      | —          | Mattermost server URL (https)                                       |
+| `MATTERMOST_TOKEN`      | Yes      | —          | Bot access token                                                    |
+| `SLAPPER_MENTION`       | No       | `@slapper` | Trigger mention                                                     |
+| `MUSIC_COUNTRY`         | No       | `US`       | Storefront for Apple Music search (`ODESLI_COUNTRY` still accepted) |
+| `SPOTIFY_CLIENT_ID`     | No       | —          | Spotify API client ID (enables direct Spotify track links)          |
+| `SPOTIFY_CLIENT_SECRET` | No       | —          | Spotify API client secret                                           |
+| `PORT`                  | No       | `3000`     | Health check port                                                   |
+| `LOG_LEVEL`             | No       | `info`     | debug, info, warn, error                                            |
+| `CACHE_TTL_SECONDS`     | No       | `86400`    | URL resolution cache TTL                                            |
+
+## How Resolution Works
+
+1. Read the title and artist from the source link:
+   - **Apple Music** — iTunes Lookup API (using the link's storefront)
+   - **Spotify** — Spotify Web API if credentials are set, otherwise the public track page's Open Graph tags
+   - **YouTube** — oEmbed, with the video title cleaned up and split into artist/title
+2. Search the other platform(s) with that title and artist:
+   - **Apple Music** — iTunes Search API
+   - **Spotify** — Spotify Web API search (needs credentials); without credentials the bot links a Spotify search page instead
 
 ## Local Development
 
@@ -141,7 +153,7 @@ docker-compose up
 MATTERMOST_URL=https://your-mattermost-instance.com
 MATTERMOST_TOKEN=your-bot-token-here
 SLAPPER_MENTION=@slapper
-ODESLI_COUNTRY=US
+MUSIC_COUNTRY=US
 PORT=3000
 LOG_LEVEL=info
 CACHE_TTL_SECONDS=86400
@@ -154,7 +166,7 @@ CACHE_TTL_SECONDS=86400
 
 ### Network Requirements
 
-- The container must have outbound access to your Mattermost server and `api.song.link`
+- The container must have outbound access to your Mattermost server, `itunes.apple.com`, `open.spotify.com`, `api.spotify.com`, `accounts.spotify.com`, and `www.youtube.com`
 - If Mattermost uses a private hostname, the Coolify server must be able to resolve it
 - If Mattermost uses a self-signed certificate, add the CA certificate to the container's trust store via a mounted volume at `/usr/local/share/ca-certificates/` and run `update-ca-certificates`. Do not set `NODE_TLS_REJECT_UNAUTHORIZED=0`.
 
@@ -172,7 +184,7 @@ CACHE_TTL_SECONDS=86400
 | ------------------------- | ---------------------------------------------------------------------- |
 | Bot not responding        | Check it's invited to the channel with `/invite @slapper`              |
 | WebSocket disconnecting   | Check `MATTERMOST_URL` is correct and reachable                        |
-| "couldn't resolve" errors | The Odesli API may be rate-limiting or the link is unsupported         |
+| "couldn't resolve" errors | The metadata lookup for the source link failed — check `warn` logs     |
 | Duplicate responses       | Should not happen — dedup is built in. Check logs for reconnect storms |
 
 ## Security
@@ -187,10 +199,10 @@ CACHE_TTL_SECONDS=86400
 
 ## Limitations
 
-- Odesli/Songlink is the only resolver — if it's down, resolution fails
+- Matching is search-based, so covers, remixes, or ambiguous titles can match the wrong recording
+- Without Spotify credentials, YouTube and Apple Music links get a Spotify search link rather than a direct track
 - In-memory cache is lost on restart (acceptable for MVP)
 - No Redis or persistent storage
-- Rate limits from Odesli are handled with retry but not queued
 
 ## Replacing the Resolver
 
